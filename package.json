@@ -1,0 +1,29 @@
+{
+  "name": "rp-codemirror",
+  "version": "1.0.0",
+  "description": "Codemirror recorder and replayer for ractive-player/ractive-editor",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ysulyma/rp-codemirror.git"
+  },
+  "keywords": [
+    "ractive-player"
+  ],
+  "author": "Yuri Sulyma <yuri@lmqm.xyz>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ysulyma/rp-codemirror/issues"
+  },
+  "homepage": "https://github.com/ysulyma/rp-codemirror#readme",
+  "peerDependencies": {
+    "ractive-editor": "^1.0.0",
+    "ractive-player": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/codemirror": "0.0.77"
+  }
+}
