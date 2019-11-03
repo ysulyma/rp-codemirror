@@ -1,7 +1,6 @@
 import * as React from "react";
-import {useContext, useEffect} from "react";
 
-import {Player, Utils} from "ractive-player";
+import {Player} from "ractive-player";
 
 import {Editor} from "codemirror";
 
@@ -163,5 +162,5 @@ function camel2dash(str: string) {
 
 function whitelist<T, K extends keyof T>(obj: T, keys: K[]) {
   return keys.map(k => k in obj ? {[k]: obj[k]} : {})
-         .reduce((res, o) => Object.assign(res, o), {}) as Pick<T, K>;
+  .reduce((res, o) => Object.assign(res, o), {}) as Pick<T, K>;
 }

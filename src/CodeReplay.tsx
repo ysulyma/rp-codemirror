@@ -1,5 +1,5 @@
 import * as React from "react";
-import {Playback, Script, Player, Utils, ReplayData} from "ractive-player";
+import {Player, Utils, ReplayData} from "ractive-player";
 const {bind} = Utils.misc,
       {parseTime} = Utils.time;
 
@@ -46,7 +46,7 @@ interface CRState {
   value: string[];
 }
 
-type ReplayCommand = CaptureData extends ReplayData<infer T> ? T extends [infer A, infer B] ? {type: A; data: B; state: CRState;} : never : never;
+type ReplayCommand = CaptureData extends ReplayData<infer T> ? T extends [infer A, infer B] ? {type: A; data: B; state: CRState} : never : never;
 
 export default class CodeReplay extends React.Component<Props, {}> {
   static contextType = Player.Context;
@@ -183,8 +183,6 @@ export default class CodeReplay extends React.Component<Props, {}> {
   }
 
   fwd(_: ReplayCommand) {
-    const cm = this.codeEditor.editor;
-
     switch (_.type) {
     case "command":
       this.props.command("fwd", _.data, _.state);
@@ -202,8 +200,6 @@ export default class CodeReplay extends React.Component<Props, {}> {
   }
 
   back(_: ReplayCommand) {
-    const cm = this.codeEditor.editor;
-
     switch(_.type) {
     case "command":
       this.props.command("back", _.data, _.state);
@@ -230,7 +226,7 @@ export default class CodeReplay extends React.Component<Props, {}> {
     return this.cursorState;
   }
 
-  setCursor({line, ch}: {line: number; ch: number;}) {
+  setCursor({line, ch}: {line: number; ch: number}) {
     const cm = this.codeEditor.editor,
           coords = cm.cursorCoords({line, ch: ch}, "div");
 
@@ -331,7 +327,7 @@ function clipToLen(pos: CodeMirror.Position, linelen: number) {
 
 function whitelist<T, K extends keyof T>(obj: T, keys: K[]) {
   return keys.map(k => k in obj ? {[k]: obj[k]} : {})
-         .reduce((res, o) => Object.assign(res, o), {}) as Pick<T, K>;
+  .reduce((res, o) => Object.assign(res, o), {}) as Pick<T, K>;
 }
 
 /* helper functions */

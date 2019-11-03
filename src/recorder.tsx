@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as CodeMirror from "codemirror";
 
-import {Player, Utils, ReplayData} from "ractive-player";
+import {Utils, ReplayData} from "ractive-player";
 const {bind} = Utils.misc;
 import {Recorder, RecorderConfigureComponent, RecorderPlugin} from "rp-recording";
 
@@ -104,7 +104,7 @@ class KeyRecorder implements Recorder {
 
   static connectedEditor: CodeEditor;
 
-  constructor(player: Player) {
+  constructor() {
     bind(this, ["captureCursor", "captureKey", "captureKeySequence"]);
 
     this.cm = KeyRecorder.connectedEditor.editor;
@@ -186,7 +186,7 @@ class KeyRecorder implements Recorder {
     }
   };
 
-  captureKey(cm: CodeMirror.Editor, {from, to, text, removed, origin}: CodeMirror.EditorChange) {
+  captureKey(cm: CodeMirror.Editor, {from, to, text, removed}: CodeMirror.EditorChange) {
     if (this.paused) return;
 
     this.captureData.push([
@@ -275,16 +275,12 @@ function KeySaveComponent(props: {data: CaptureData}) {
   );
 }
 
-interface CodeRecorderPlugin {
-  recorder: typeof KeyRecorder;
-}
-
 export default {
   name: "CodeRecorder",
   recorder: KeyRecorder,
   configureComponent: KeyConfigureComponent,
   saveComponent: KeySaveComponent
-} as CodeRecorderPlugin;
+} as RecorderPlugin<typeof KeyRecorder>;
 
 function formatNum(x: number): number {
   return parseFloat(x.toFixed(2));
