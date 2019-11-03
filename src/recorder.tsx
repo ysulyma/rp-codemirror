@@ -3,7 +3,9 @@ import * as CodeMirror from "codemirror";
 
 import {Player, Utils, ReplayData} from "ractive-player";
 const {bind} = Utils.misc;
-import {Recorder, RecorderConfigureComponent, RecorderPlugin} from "ractive-editor";
+import {Recorder, RecorderConfigureComponent, RecorderPlugin} from "rp-recording";
+
+import CodeEditor from "./CodeEditor";
 
 interface CMSelection {
   anchor: CodeMirror.Position;
@@ -90,10 +92,8 @@ const keyboardIcon = (
   </g>
 );
 
-const LOCAL_STORAGE_RECORDINGS_KEY = "Controls.KeyRecorder recordings";
-
 // the actual thingy that gets exported
-export default class KeyRecorder implements Recorder {
+class KeyRecorder implements Recorder {
   private captureData: CaptureData;
   private cm: CodeMirror.Editor;
 
@@ -102,19 +102,25 @@ export default class KeyRecorder implements Recorder {
   private lastPauseTime: number;
   private paused: boolean;
 
+  static connectedEditor: CodeEditor;
+
   constructor(player: Player) {
     bind(this, ["captureCursor", "captureKey", "captureKeySequence"]);
 
-    this.cm = player[Symbol.for("KeyRecorder target")];
-    // console.log(this.cm);
+    this.cm = KeyRecorder.connectedEditor.editor;
+  }
 
-    // persistence
-    /*    on(window, 'beforeunload', () => {
-      localStorage.setItem(LOCAL_STORAGE_RECORDINGS_KEY, JSON.stringify(this.captureData));
-    });*/
+  static connect(editor: CodeEditor) {
+    if (this.connectedEditor) {
+      this.connectedEditor.disconnect();
+    }
+    this.connectedEditor = editor;
+    this.connectedEditor.connect();
+  }
 
-    // recording stuff
-    //    this.captureData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_RECORDINGS_KEY)) || [];
+  static disconnect() {
+    this.connectedEditor.disconnect();
+    this.connectedEditor = null;
   }
 
   beginRecording(baseTime: number) {
@@ -138,18 +144,25 @@ export default class KeyRecorder implements Recorder {
     this.paused = false;
   }
 
-  async endRecording() {
+  endRecording() {
     this.cm.off("change", this.captureKey);
     this.cm.off("cursorActivity", this.captureCursor);
     this.cm.off("keyHandled", this.captureKeySequence);
+  }
 
+  finalizeRecording(startDelay: number) {
+    for (const datum of this.captureData) {
+      datum[0] -= startDelay;
+    }
+    this.captureData = this.captureData.filter(_ => _[0] >= 0);
+
+    // convert to relative times (reduces filesize)
     for (let i = this.captureData.length - 1; i >= 1; --i) {
       this.captureData[i][0] -= this.captureData[i-1][0];
     }
     for (let i = 0; i < this.captureData.length; ++i) {
       this.captureData[i][0] = formatNum(this.captureData[i][0]);
     }
-
     return this.captureData;
   }
 
@@ -211,15 +224,31 @@ export default class KeyRecorder implements Recorder {
 //     || CodeMirror.lookupKey(name, cm.options.keyMap, handle, cm)
 // }
 
-export class KeyConfigureComponent extends RecorderConfigureComponent {
+class KeyConfigureComponent extends RecorderConfigureComponent {
+  toggleActive() {
+    if (!KeyRecorder.connectedEditor) {
+      this.props.setPluginActive(false);
+      this.setState({active: false});
+      return;
+    }
+
+    this.props.setPluginActive(!this.state.active);
+    this.setState({active: !this.state.active});
+  }
+
   render() {
     const classNames = ["recorder-plugin-icon"];
 
     if (this.state.active)
       classNames.push("active");
 
+    const styles: React.CSSProperties = {};
+    if (!KeyRecorder.connectedEditor) {
+      styles.opacity = 0.3;
+    }
+
     return (
-      <div className="recorder-plugin" title="Record code">
+      <div className="recorder-plugin" title="Record code" {...{style: styles}}>
         <svg className="recorder-plugin-icon" height="36" width="36" viewBox="0 0 187.5 187.5" onClick={this.toggleActive}>
           <rect x="0" y="0" height="187.5" width="187.5" fill={this.state.active ? "red" : "#222"}/>
           {keyboardIcon}
@@ -230,7 +259,7 @@ export class KeyConfigureComponent extends RecorderConfigureComponent {
   }
 }
 
-export function KeySaveComponent(props: {data: CaptureData}) {
+function KeySaveComponent(props: {data: CaptureData}) {
   return (
     <>
       <th key="head" scope="row">
@@ -246,12 +275,16 @@ export function KeySaveComponent(props: {data: CaptureData}) {
   );
 }
 
-export const CodeRecorderPlugin = {
+interface CodeRecorderPlugin {
+  recorder: typeof KeyRecorder;
+}
+
+export default {
   name: "CodeRecorder",
   recorder: KeyRecorder,
   configureComponent: KeyConfigureComponent,
   saveComponent: KeySaveComponent
-};
+} as CodeRecorderPlugin;
 
 function formatNum(x: number): number {
   return parseFloat(x.toFixed(2));

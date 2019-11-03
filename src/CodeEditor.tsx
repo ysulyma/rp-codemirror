@@ -1,16 +1,14 @@
 import * as React from "react";
+import {useContext, useEffect} from "react";
+
 import {Player, Utils} from "ractive-player";
 
-import Module from "@webu/module";
-
-import "../loaders/codemirror";
-
-import {inject, injectCSS} from "@webu/utils";
-import {on, off} from "@webu/utils/events";
-import {bind} from "@webu/utils/misc";
+import {Editor} from "codemirror";
 
 interface Props {
-  keyMap?: any;
+  keyMap?: {
+    [key: string]: () => unknown;
+  };
   mode?: string;
   readOnly?: boolean;
   className?: string;
@@ -18,42 +16,37 @@ interface Props {
   theme?: string;
 }
 
-export default class PythonEditor extends React.Component<Props, {}> {
+export default class CodeEditor extends React.Component<Props, {}> {
   static contextType = Player.Context;
-  editor: CodeMirror.Editor;
+  editor: Editor;
   placeholder: HTMLDivElement;
   ready: Promise<void>;
-  private setReady: Function;
+  private setReady: () => void;
   private player: Player;
+  private recording: boolean;
 
   static defaultProps = {
     keyMap: {},
-    mode: "python",
     readOnly: false,
-    style: {},
-    theme: "epiplexis"
+    style: {}
   }
 
   constructor(props: Props, context: Player) {
     super(props, context);
     this.player = context;
 
-    this.ready = new Promise((resolve, reject) => {
+    this.recording = false;
+
+    this.ready = new Promise((resolve) => {
       this.setReady = resolve;
     });
   }
   
   async componentDidMount() {
-    // codemirror bullshit
-    const CodeMirror = await Module.import("codemirror");
-    await CodeMirror.loadMode("python");
-
     const defaults = {
       indentUnit: 4,
       lineNumbers: true,
-      mode: "python",
-      tabSize: 4,
-      theme: "epiplexis"
+      tabSize: 4
     };
     const options = Object.assign(defaults, whitelist(this.props, ["mode", "readOnly", "theme"]));
     this.editor = window.CodeMirror(
@@ -62,9 +55,6 @@ export default class PythonEditor extends React.Component<Props, {}> {
       },
       options
     );
-
-    /* make available from DOM */
-    this.editor.getInputField()[Symbol.for("PythonEditor")] = this;
 
     /* copy props */
     const wrapper = this.editor.getWrapperElement();
@@ -76,17 +66,17 @@ export default class PythonEditor extends React.Component<Props, {}> {
 
     /* event handlers */
     // avoid pausing video
-    on(wrapper, "mouseup", e => e.stopPropagation());
+    wrapper.addEventListener("mouseup", Player.preventCanvasClick);
 
     this.editor.on("keydown", (cm, e) => {
       if (!e.key.match(/^[A-Z]$/i)) return;
-      
-      cm.showHint({
-        hint: CodeMirror.hint.anyword,
+
+      this.editor.showHint({
+        hint: window.CodeMirror.hint.anyword,
         completeSingle: false,
         customKeys: {
-          "Cmd-/": (cm, handle) => handle.close(),
-          Tab: (cm, handle) => handle.pick()
+          "Cmd-/": (cm: Editor, handle) => handle.close(),
+          Tab: (cm: Editor, handle) => handle.pick()
         }
       });
     });
@@ -101,7 +91,6 @@ export default class PythonEditor extends React.Component<Props, {}> {
     this.editor.on("blur", () => {
       if (this.props.readOnly) return;
 
-      // XXX ugh fuck
       this.player.resumeKeyCapture();
     });
 
@@ -109,27 +98,26 @@ export default class PythonEditor extends React.Component<Props, {}> {
     const keyMap = Object.assign(
       {},
       {
-        Tab(cm) {
+        Tab(cm: CodeMirror.Editor) {
           const spaces = Array(cm.getOption("indentUnit") + 1).join(" ");
-          cm.replaceSelection(spaces);
+          cm.getDoc().replaceSelection(spaces);
         }
       },
       this.props.keyMap
     );
 
-    if (this.player.props.authoring) {
-      for (const n of [2, 3, 4]) {
-        keyMap[`Cmd-Alt-${n}`] = () => {
-          this.player.resumeKeyCapture();
+    for (const n of [2, 3, 4]) {
+      keyMap[`Cmd-Alt-${n}`] = () => {
+        if (!this.recording) return;
+        this.player.resumeKeyCapture();
 
-          document.body.dispatchEvent(new KeyboardEvent(
-            "keydown",
-            {code: `Digit${n}`, altKey: true, metaKey: true}
-          ));
+        document.body.dispatchEvent(new KeyboardEvent(
+          "keydown",
+          {code: `Digit${n}`, altKey: true, metaKey: true}
+        ));
 
-          this.player.suspendKeyCapture();
-        };
-      }
+        this.player.suspendKeyCapture();
+      };
     }
 
     this.editor.addKeyMap(keyMap);
@@ -137,8 +125,9 @@ export default class PythonEditor extends React.Component<Props, {}> {
     this.setReady();
   }
 
-  componentWillReceiveProps(nextProps) {
+  shouldComponentUpdate(nextProps: Props) {
     if (!this.editor) return;
+
     const declaration = this.editor.getWrapperElement().style;
 
     for (const key in this.props.style) {
@@ -148,6 +137,16 @@ export default class PythonEditor extends React.Component<Props, {}> {
     }
 
     Object.assign(declaration, nextProps.style);
+
+    return false;
+  }
+
+  connect() {
+    this.recording = true;
+  }
+
+  disconnect() {
+    this.recording = false;
   }
 
   render() {

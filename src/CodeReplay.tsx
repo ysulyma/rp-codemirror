@@ -1,19 +1,15 @@
 import * as React from "react";
 import {Playback, Script, Player, Utils, ReplayData} from "ractive-player";
+const {bind} = Utils.misc,
+      {parseTime} = Utils.time;
 
-import PythonEditor from "./PythonEditor";
-import PythonInterpreter from "../lib/PythonInterpreter";
+import CodeEditor from "./CodeEditor";
 
 // issues are:
 
 // # sort of have to ignore the existing cursor
 
 // # need to do this state recreation bullshit
-
-import * as dom from "@webu/utils/dom";
-import {bind} from "@webu/utils/misc";
-
-const {parseTime} = Utils.time;
 
 interface CMSelection {
   anchor: CodeMirror.Position;
@@ -35,31 +31,42 @@ export type CaptureData = ReplayData<
 >;
 
 interface Props {
-  command: Function;
+  command: (dir: "fwd" | "back", data: string, state: CRState) => void;
+  mode?: string;
   replay: CaptureData;
   start: number | string;
   className?: string;
   style?: React.CSSProperties;
+  theme?: string;
 }
+
+interface CRState {
+  cursor: CodeMirror.Position;
+  selection: CMSelection;
+  value: string[];
+}
+
+type ReplayCommand = CaptureData extends ReplayData<infer T> ? T extends [infer A, infer B] ? {type: A; data: B; state: CRState;} : never : never;
 
 export default class CodeReplay extends React.Component<Props, {}> {
   static contextType = Player.Context;
-  i: number;
-  lastTime: number;
-  cursorState: CodeMirror.Position;
-  times: number[];
-  duration: number;
-  replay: CaptureData;
-  PythonEditor: PythonEditor;
-  selectionsDiv: HTMLDivElement;
-  start: number;
+
+  private i: number;
+  private lastTime: number;
+  private player: Player;
+  private replay: CaptureData;
+  private times: number[];
+
+  codeEditor: CodeEditor;
   cursor: HTMLDivElement;
   cursorDiv: HTMLDivElement;
+  cursorState: CodeMirror.Position;
+  duration: number;
+  selectionsDiv: HTMLDivElement;
+  start: number;
 
-  private player: Player;
-
-  static defaultProps = {
-    data: []
+  static defaultProps: Partial<Props> = {
+    replay: []
   }
 
   constructor(props: Props, context: Player) {
@@ -101,13 +108,13 @@ export default class CodeReplay extends React.Component<Props, {}> {
     playback.hub.on("seek", this.onTimeUpdate);
     playback.hub.on("timeupdate", this.onTimeUpdate);
 
-    this.PythonEditor.ready.then(() => {
-      const cm = this.PythonEditor.editor;
+    this.codeEditor.ready.then(() => {
+      const cm = this.codeEditor.editor;
 
       // manage the cursor ourselves
       const oldCursorDiv = cm.getWrapperElement().querySelector(".CodeMirror-cursors");
 
-      this.cursorDiv = dom.fromHTML(`
+      this.cursorDiv = fromHTML(`
         <div class="CodeMirror-cursors">
           <div class="CodeMirror-cursor">\u00a0</div>
         </div>
@@ -120,14 +127,14 @@ export default class CodeReplay extends React.Component<Props, {}> {
       setInterval(this.blinkCursor, cm.getOption("cursorBlinkRate"));
 
       // also manage a fake selection ourselves...
-      this.selectionsDiv = dom.fromHTML("<div style=\"position: relative;z-index: 1;\"/>") as HTMLDivElement;
-      this.cursorDiv.parentNode.insertBefore(this.selectionsDiv, this.cursorDiv); // jesus fucking christ
+      this.selectionsDiv = fromHTML("<div style=\"position: relative;z-index: 1;\"/>") as HTMLDivElement;
+      this.cursorDiv.parentNode.insertBefore(this.selectionsDiv, this.cursorDiv); // yikes
     });
   }
 
   onTimeUpdate(t: number) {
     const progress = t - this.start;
-    const cm = this.PythonEditor.editor;
+    const cm = this.codeEditor.editor;
     if (!cm) return;
     const state = {
       cursor: this.getCursor(),
@@ -145,14 +152,14 @@ export default class CodeReplay extends React.Component<Props, {}> {
       let i = this.i;
       for (; i < replay.length && this.times[i] <= progress; ++i) {
         const [, [type, data]] = replay[i];
-        this.fwd(type, data, state);
+        this.fwd({type, data, state} as ReplayCommand);
       }
       this.i = i;
     } else if (t < this.lastTime && 0 < this.i) {
       let i = this.i - 1;
       for (; 0 <= i && progress < this.times[i]; --i) {
         const [, [type, data]] = replay[i];
-        this.back(type, data, state);
+        this.back({type, data, state} as ReplayCommand);
       }
       this.i = i + 1;
     }
@@ -175,42 +182,42 @@ export default class CodeReplay extends React.Component<Props, {}> {
     this.lastTime = t;
   }
 
-  fwd(type, data, state) {
-    const cm = this.PythonEditor.editor;
+  fwd(_: ReplayCommand) {
+    const cm = this.codeEditor.editor;
 
-    switch (type) {
+    switch (_.type) {
     case "command":
-      this.props.command("fwd", data, state);
+      this.props.command("fwd", _.data, _.state);
       break;
     case "cursor":
-      state.cursor = data;
+      _.state.cursor = _.data;
       break;
     case "selection":
-      state.selection = data;
+      _.state.selection = _.data;
       break;
     case "text":
-      replaceRange(state.value, data.text, data.from, data.to);
+      replaceRange(_.state.value, _.data.text, _.data.from, _.data.to);
       break;
     }
   }
 
-  back(type, data, state) {
-    const cm = this.PythonEditor.editor;
+  back(_: ReplayCommand) {
+    const cm = this.codeEditor.editor;
 
-    switch(type) {
+    switch(_.type) {
     case "command":
-      this.props.command("back", data, state);
+      this.props.command("back", _.data, _.state);
       break;
     case "cursor":
       break;
     case "text":
-      const from = {line: data.from.line, ch: data.from.ch},
+      const from = {line: _.data.from.line, ch: _.data.from.ch},
             to = {
-              line: data.from.line + data.text.length - 1,
-              ch: data.text.length === 1 ? data.from.ch + data.text[0].length : data.text[data.text.length - 1].length
+              line: _.data.from.line + _.data.text.length - 1,
+              ch: _.data.text.length === 1 ? _.data.from.ch + _.data.text[0].length : _.data.text[_.data.text.length - 1].length
             };
 
-      replaceRange(state.value, data.removed, from, to);
+      replaceRange(_.state.value, _.data.removed, from, to);
       break;
     }
   }
@@ -224,7 +231,7 @@ export default class CodeReplay extends React.Component<Props, {}> {
   }
 
   setCursor({line, ch}: {line: number; ch: number;}) {
-    const cm = this.PythonEditor.editor,
+    const cm = this.codeEditor.editor,
           coords = cm.cursorCoords({line, ch: ch}, "div");
 
     const height = Math.max(0, coords.bottom - coords.top) * cm.getOption("cursorHeight");
@@ -239,9 +246,10 @@ export default class CodeReplay extends React.Component<Props, {}> {
   }
 
   setSelection(anchor: CodeMirror.Position, head: CodeMirror.Position) {
-    const cm = this.PythonEditor.editor;
+    const cm = this.codeEditor.editor;
 
-    dom.empty(this.selectionsDiv);
+    while (this.selectionsDiv.firstChild)
+      this.selectionsDiv.lastChild.remove();
 
     const anchorCoords = cm.cursorCoords(anchor, "div"),
           headCoords = cm.cursorCoords(head, "div"),
@@ -270,7 +278,7 @@ export default class CodeReplay extends React.Component<Props, {}> {
     }
 
     function makeLine(left: number, top: number, width: number, height: number) {
-      const elt = dom.fromHTML("<div class=\"CodeMirror-selected\" style=\"position: absolute;\"></div>") as HTMLDivElement;
+      const elt = fromHTML("<div class=\"CodeMirror-selected\" style=\"position: absolute;\"></div>") as HTMLDivElement;
       Object.assign(elt.style, {
         left: `${left}px`,
         top: `${top}px`,
@@ -282,11 +290,11 @@ export default class CodeReplay extends React.Component<Props, {}> {
   }
 
   render() {
-    const attrs = whitelist(this.props, ["className", "style"]);
+    const attrs = whitelist(this.props, ["className", "mode", "style", "theme"]);
 
     return (
-      <PythonEditor
-        ref={pye => this.PythonEditor = pye}
+      <CodeEditor
+        ref={pye => this.codeEditor = pye}
         readOnly={true}
         {...attrs}/>
     );
@@ -324,4 +332,11 @@ function clipToLen(pos: CodeMirror.Position, linelen: number) {
 function whitelist<T, K extends keyof T>(obj: T, keys: K[]) {
   return keys.map(k => k in obj ? {[k]: obj[k]} : {})
          .reduce((res, o) => Object.assign(res, o), {}) as Pick<T, K>;
+}
+
+/* helper functions */
+function fromHTML(str: string) {
+  const t = document.createElement("template");
+  t.innerHTML = str;
+  return (t.content.cloneNode(true) as DocumentFragment).firstElementChild;
 }

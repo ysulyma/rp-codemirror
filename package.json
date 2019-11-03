@@ -1,17 +1,25 @@
 {
   "name": "rp-codemirror",
   "version": "1.0.0",
-  "description": "Codemirror recorder and replayer for ractive-player/ractive-editor",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "description": "Codemirror recorder and replayer for ractive-player/rp-recording",
+  "exports": {
+    "./recorder": "./rp-codemirror.recorder.js"
   },
+  "files": [
+    "rp-codemirror.js",
+    "rp-codemirror.recorder.js",
+    "rp-codemirror.d.ts",
+    "recorder.d.ts"
+  ],
+  "main": "rp-codemirror.js",
+  "typings": "rp-codemirror.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ysulyma/rp-codemirror.git"
   },
   "keywords": [
-    "ractive-player"
+    "ractive-player",
+    "codemirror"
   ],
   "author": "Yuri Sulyma <yuri@lmqm.xyz>",
   "license": "MIT",
@@ -20,10 +28,25 @@
   },
   "homepage": "https://github.com/ysulyma/rp-codemirror#readme",
   "peerDependencies": {
-    "ractive-editor": "^1.0.0",
+    "@types/codemirror": "^0.0.79",
+    "@types/react": "^16.9.11",
+    "rp-recording": "^1.0.0",
     "ractive-player": "^1.0.2"
   },
   "devDependencies": {
-    "@types/codemirror": "0.0.77"
+    "@types/codemirror": "^0.0.79",
+    "@types/react": "^16.9.11",
+    "@typescript-eslint/eslint-plugin": "^2.5.0",
+    "@typescript-eslint/parser": "^2.5.0",
+    "banner-webpack-plugin": "^0.2.3",
+    "eslint": "^6.6.0",
+    "eslint-plugin-react": "^7.16.0",
+    "eslint-plugin-react-hooks": "^2.2.0",
+    "ractive-player": "^1.1.1",
+    "rp-recording": "^1.0.0",
+    "ts-loader": "^6.2.1",
+    "typescript": "^3.6.4",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.9"
   }
 }
