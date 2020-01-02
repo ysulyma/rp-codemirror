@@ -16,6 +16,14 @@ interface Props {
   theme?: string;
 }
 
+// make sure spaces are registered on mobile - see https://github.com/codemirror/CodeMirror/issues/5367
+{
+  const style = document.createElement("style");
+  style.type = "text/css";
+  document.head.appendChild(style);
+  (style.sheet as CSSStyleSheet).insertRule(".CodeMirror [contenteditable]{-webkit-user-select: text;user-select: text;}", 0);
+}
+
 export default class CodeEditor extends React.Component<Props, {}> {
   static contextType = Player.Context;
   editor: Editor;
