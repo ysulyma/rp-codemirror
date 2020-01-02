@@ -2,7 +2,8 @@ import * as React from "react";
 
 import {Player} from "ractive-player";
 
-import {Editor} from "codemirror";
+import {Editor, Handle} from "codemirror";
+import * as _ from "codemirror/addon/hint/show-hint";
 
 interface Props {
   keyMap?: {
@@ -74,8 +75,8 @@ export default class CodeEditor extends React.Component<Props, {}> {
         hint: window.CodeMirror.hint.anyword,
         completeSingle: false,
         customKeys: {
-          "Cmd-/": (cm: Editor, handle) => handle.close(),
-          Tab: (cm: Editor, handle) => handle.pick()
+          "Cmd-/": (cm: Editor, handle: Handle) => handle.close(),
+          Tab: (cm: Editor, handle: Handle) => handle.pick()
         }
       });
     });
