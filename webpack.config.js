@@ -46,7 +46,7 @@ const baseConfig = {
         }
       })
     ],
-    noEmitOnErrors: false
+    emitOnErrors: true
   },
 
   plugins: [
@@ -68,7 +68,8 @@ module.exports = [
       filename: "rp-codemirror.js",
       path: __dirname,
       library: "RPCodeMirror",
-      libraryTarget: "umd"
+      libraryTarget: "umd",
+      globalObject: `(typeof self !== 'undefined' ? self : this)`
     }
   },
   {

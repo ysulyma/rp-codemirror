@@ -2,13 +2,12 @@ import * as React from "react";
 
 import {Player} from "ractive-player";
 
-import {Editor, Handle} from "codemirror";
+import {Editor, Handle, HintFunction} from "codemirror";
 import * as _ from "codemirror/addon/hint/show-hint";
 
 interface Props {
-  keyMap?: {
-    [key: string]: () => unknown;
-  };
+  keyMap?: CodeMirror.KeyMap;
+  hint?: HintFunction;
   mode?: string;
   readOnly?: boolean;
   className?: string;
@@ -42,8 +41,6 @@ export default class CodeEditor extends React.Component<Props, {}> {
   constructor(props: Props, context: Player) {
     super(props, context);
     this.player = context;
-
-    this.recording = false;
 
     this.ready = new Promise((resolve) => {
       this.setReady = resolve;
@@ -79,11 +76,15 @@ export default class CodeEditor extends React.Component<Props, {}> {
     this.editor.on("keydown", (cm, e) => {
       if (!e.key.match(/^[A-Z]$/i)) return;
 
+      if (!this.props.hint)
+        return;
+
       this.editor.showHint({
-        hint: window.CodeMirror.hint.anyword,
+        hint: this.props.hint,
         completeSingle: false,
         customKeys: {
-          "Cmd-/": (cm: Editor, handle: Handle) => handle.close(),
+          "Down": (cm, handle) => handle.moveFocus(1),
+          "Up": (cm, handle) => handle.moveFocus(-1),
           Tab: (cm: Editor, handle: Handle) => handle.pick()
         }
       });
@@ -103,32 +104,13 @@ export default class CodeEditor extends React.Component<Props, {}> {
     });
 
     /* keyboard shortcuts */
-    const keyMap = Object.assign(
-      {},
-      {
-        Tab(cm: CodeMirror.Editor) {
-          const spaces = Array(cm.getOption("indentUnit") + 1).join(" ");
-          cm.getDoc().replaceSelection(spaces);
-        }
-      },
-      this.props.keyMap
-    );
-
-    for (const n of [2, 3, 4]) {
-      keyMap[`Cmd-Alt-${n}`] = () => {
-        if (!this.recording) return;
-        this.player.resumeKeyCapture();
-
-        document.body.dispatchEvent(new KeyboardEvent(
-          "keydown",
-          {code: `Digit${n}`, altKey: true, metaKey: true}
-        ));
-
-        this.player.suspendKeyCapture();
-      };
-    }
-
-    this.editor.addKeyMap(keyMap);
+    this.editor.addKeyMap({
+      Tab(cm: CodeMirror.Editor) {
+        const spaces = Array(cm.getOption("indentUnit") + 1).join(" ");
+        cm.getDoc().replaceSelection(spaces);
+      }
+    });
+    this.editor.addKeyMap(this.props.keyMap);
 
     this.setReady();
   }
@@ -147,14 +129,6 @@ export default class CodeEditor extends React.Component<Props, {}> {
     Object.assign(declaration, nextProps.style);
 
     return false;
-  }
-
-  connect() {
-    this.recording = true;
-  }
-
-  disconnect() {
-    this.recording = false;
   }
 
   render() {

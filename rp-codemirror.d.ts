@@ -7,9 +7,7 @@ export as namespace RPCodeMirror;
 
 // CodeEditor
 interface CodeEditorProps {
-  keyMap?: {
-    [key: string]: () => unknown;
-  };
+  keyMap?: CodeMirror.KeyMap;
   mode?: string;
   readOnly?: boolean;
   className?: string;

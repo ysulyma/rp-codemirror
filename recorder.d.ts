@@ -1,6 +1,6 @@
 import {Player} from "ractive-player";
 import {Recorder, RecorderPlugin} from "rp-recording";
-import {CodeEditor} from "./dist/rp-codemirror";
+import {CodeEditor} from "./rp-codemirror";
 
 // recorder
 interface KeyRecorderStatic {
@@ -9,5 +9,5 @@ interface KeyRecorderStatic {
   new(player: Player): Recorder;
 }
 
-declare const _default: RecorderPlugin<KeyRecorderStatic>;
+declare const _default: RecorderPlugin;
 export default _default;

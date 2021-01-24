@@ -1,7 +1,8 @@
 import * as React from "react";
-import {Player, Utils, ReplayData} from "ractive-player";
+import {Player, Utils} from "ractive-player";
 const {bind} = Utils.misc,
       {parseTime} = Utils.time;
+import type {Broadcast, ReplayData} from "ractive-player";
 
 import CodeEditor from "./CodeEditor";
 
@@ -31,6 +32,7 @@ export type CaptureData = ReplayData<
 >;
 
 interface Props {
+  broadcast?: Broadcast;
   command: (dir: "fwd" | "back", data: string, state: CRState) => void;
   mode?: string;
   replay: CaptureData;
@@ -56,6 +58,7 @@ export default class CodeReplay extends React.Component<Props, {}> {
   private player: Player;
   private replay: CaptureData;
   private times: number[];
+  private broadcast?: Broadcast;
 
   codeEditor: CodeEditor;
   cursor: HTMLDivElement;
@@ -73,7 +76,7 @@ export default class CodeReplay extends React.Component<Props, {}> {
     super(props, context);
     this.player = context;
 
-    bind(this, ["blinkCursor", "onTimeUpdate"]);
+    bind(this, ["blinkCursor", "onTimeUpdate", "poll"]);
 
     // parse start
     if (typeof props.start === "string") {
@@ -91,13 +94,27 @@ export default class CodeReplay extends React.Component<Props, {}> {
     this.cursorState = {line: 0, ch: 0};
 
     // figure out duration
-    const {replay} = this.props;
+    this.broadcast = props.broadcast;
 
-    this.times = replay.map(_ => _[0]);
+    this.replay = this.props.replay;
+
+    this.times = this.replay.map(_ => _[0]);
     for (let i = 1; i < this.times.length; ++i)
       this.times[i] += this.times[i-1];
 
-    if (replay.length === 0) return;
+    if (this.replay.length === 0)
+      return;
+    this.duration = this.times[this.times.length - 1];
+  }
+
+  async poll(data: CaptureData) {
+    this.replay.push(...data);
+
+    let sum = this.times.length === 0 ? 0 : this.times[this.times.length - 1];
+    for (const [t] of data) {
+      this.times.push(sum + t);
+      sum += t;
+    }
     this.duration = this.times[this.times.length - 1];
   }
 
@@ -141,24 +158,23 @@ export default class CodeReplay extends React.Component<Props, {}> {
       selection: cm.getDoc().listSelections()[0],
       value: cm.getValue().split("\n")
     };
-    const {replay} = this.props;
 
     const lastI = this.i;
 
     // for performance reasons when seeking, we batch updates
     // and mimic cm.replaceRange() instead of calling
     // cm.replaceRange() repeatedly (reparses the whole doc etc.)
-    if (this.lastTime <= t && this.i < replay.length) {
+    if (this.lastTime <= t && this.i < this.replay.length) {
       let i = this.i;
-      for (; i < replay.length && this.times[i] <= progress; ++i) {
-        const [, [type, data]] = replay[i];
+      for (; i < this.replay.length && this.times[i] <= progress; ++i) {
+        const [, [type, data]] = this.replay[i];
         this.fwd({type, data, state} as ReplayCommand);
       }
       this.i = i;
     } else if (t < this.lastTime && 0 < this.i) {
       let i = this.i - 1;
       for (; 0 <= i && progress < this.times[i]; --i) {
-        const [, [type, data]] = replay[i];
+        const [, [type, data]] = this.replay[i];
         this.back({type, data, state} as ReplayCommand);
       }
       this.i = i + 1;

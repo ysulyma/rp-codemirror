@@ -1,9 +1,11 @@
 import * as React from "react";
+import {useMemo, useState} from "react";
 import * as CodeMirror from "codemirror";
 
 import {Utils, ReplayData} from "ractive-player";
-const {bind} = Utils.misc;
-import {Recorder, RecorderConfigureComponent, RecorderPlugin} from "rp-recording";
+const {bind} = Utils.misc,
+      {onClick} = Utils.mobile;
+import {ReplayDataRecorder, RecorderPlugin} from "rp-recording";
 
 import CodeEditor from "./CodeEditor";
 
@@ -19,15 +21,14 @@ interface Change {
   removed: string[];
 }
 
-type CaptureData = ReplayData<
-["command", string] |
-["cursor", CodeMirror.Position] |
-["selection", CMSelection] |
-["text", Change]
->;
+type CaptureData = 
+  ["command", string] |
+  ["cursor", CodeMirror.Position] |
+  ["selection", CMSelection] |
+  ["text", Change];
 
-const keyboardIcon = (
-  <g>
+const icon = (
+  <g transform="scale(0.5333333333)">
     <g transform="translate(-138.61 -857.23)">
       <rect
         style={{
@@ -93,124 +94,82 @@ const keyboardIcon = (
 );
 
 // the actual thingy that gets exported
-class KeyRecorder implements Recorder {
-  private captureData: CaptureData;
+class KeyRecorder extends ReplayDataRecorder<CaptureData> {
   private cm: CodeMirror.Editor;
-
-  private captureStart: number;
-  private pauseTime: number;
-  private lastPauseTime: number;
-  private paused: boolean;
-
-  static connectedEditor: CodeEditor;
+  connectedEditor: CodeEditor;
 
   constructor() {
+    super();
     bind(this, ["captureCursor", "captureKey", "captureKeySequence"]);
-
-    this.cm = KeyRecorder.connectedEditor.editor;
   }
 
-  static connect(editor: CodeEditor) {
-    if (this.connectedEditor) {
-      this.connectedEditor.disconnect();
-    }
-    this.connectedEditor = editor;
-    this.connectedEditor.connect();
+  connect(codeEditor: CodeEditor) {
+    this.connectedEditor = codeEditor;
   }
 
-  static disconnect() {
-    this.connectedEditor.disconnect();
+  disconnect() {
     this.connectedEditor = null;
   }
 
-  beginRecording(baseTime: number) {
-    this.captureStart = baseTime;
-    this.captureData = [];
-    this.paused = false;
-    this.pauseTime = 0;
-
-    this.cm.on("change", this.captureKey);
-    this.cm.on("cursorActivity", this.captureCursor);
-    this.cm.on("keyHandled", this.captureKeySequence);
-  }
-
-  pauseRecording(time: number) {
-    this.paused = true;
-    this.lastPauseTime = time;
-  }
-
-  resumeRecording(time: number) {
-    this.pauseTime += time - this.lastPauseTime;
-    this.paused = false;
+  beginRecording() {
+    // DO NOT FORGET TO CALL SUPER
+    super.beginRecording();
+    const cm = this.connectedEditor.editor;
+    cm.on("change", this.captureKey);
+    cm.on("cursorActivity", this.captureCursor);
+    cm.on("keyHandled", this.captureKeySequence);
   }
 
   endRecording() {
-    this.cm.off("change", this.captureKey);
-    this.cm.off("cursorActivity", this.captureCursor);
-    this.cm.off("keyHandled", this.captureKeySequence);
-  }
-
-  finalizeRecording(startDelay: number) {
-    for (const datum of this.captureData) {
-      datum[0] -= startDelay;
-    }
-    this.captureData = this.captureData.filter(_ => _[0] >= 0);
-
-    // convert to relative times (reduces filesize)
-    for (let i = this.captureData.length - 1; i >= 1; --i) {
-      this.captureData[i][0] -= this.captureData[i-1][0];
-    }
-    for (let i = 0; i < this.captureData.length; ++i) {
-      this.captureData[i][0] = formatNum(this.captureData[i][0]);
-    }
-    return this.captureData;
+    const cm = this.connectedEditor.editor;
+    cm.off("change", this.captureKey);
+    cm.off("cursorActivity", this.captureCursor);
+    cm.off("keyHandled", this.captureKeySequence);
   }
 
   captureCursor(cm: CodeMirror.Editor) {
-    if (this.paused) return;
+    const time = this.manager.getTime();
+
+    if (this.manager.paused)
+      return;
 
     const selection = cm.getDoc().listSelections()[0],
           anchor = whitelist(selection.anchor, ["line", "ch"]),
           head = whitelist(selection.head, ["line", "ch"]);
 
     if (anchor.line === head.line && anchor.ch === head.ch) {
-      this.captureData.push([
-        this.getTime(),
-        ["cursor", whitelist(anchor, ["line", "ch"])]
-      ]);
+      this.capture(time, ["cursor", whitelist(anchor, ["line", "ch"])]);
     } else {
-      this.captureData.push([
-        this.getTime(),
-        ["selection", {anchor, head}]
-      ]);
+      this.capture(time, ["selection", {anchor, head}]);
     }
   };
 
   captureKey(cm: CodeMirror.Editor, {from, to, text, removed}: CodeMirror.EditorChange) {
-    if (this.paused) return;
+    const time = this.manager.getTime();
 
-    this.captureData.push([
-      this.getTime(),
-      [
-        "text",
-        {
-          from: whitelist(from, ["line", "ch"]),
-          to: whitelist(to, ["line", "ch"]),
-          text,
-          removed
-        }
-      ]
+    if (this.manager.paused)
+      return;
+
+    this.capture(time, [
+      "text",
+      {
+        from: whitelist(from, ["line", "ch"]),
+        to: whitelist(to, ["line", "ch"]),
+        text,
+        removed
+      }
     ]);
   }
 
   captureKeySequence(cm: CodeMirror.Editor, sequence: string) {
-    if (this.paused) return;
+    const time = this.manager.getTime();
+    if (sequence.startsWith("Cmd-Alt-"))
+      return;
 
-    this.captureData.push([this.getTime(), ["command", sequence]]);
-  }
+    if (this.manager.paused)
+      return;
 
-  getTime() {
-    return performance.now() - this.captureStart - this.pauseTime;
+    this.capture(time, ["command", sequence]);
   }
 }
 
@@ -224,63 +183,24 @@ class KeyRecorder implements Recorder {
 //     || CodeMirror.lookupKey(name, cm.options.keyMap, handle, cm)
 // }
 
-class KeyConfigureComponent extends RecorderConfigureComponent {
-  toggleActive() {
-    if (!KeyRecorder.connectedEditor) {
-      this.props.setPluginActive(false);
-      this.setState({active: false});
-      return;
-    }
-
-    this.props.setPluginActive(!this.state.active);
-    this.setState({active: !this.state.active});
-  }
-
-  render() {
-    const classNames = ["recorder-plugin-icon"];
-
-    if (this.state.active)
-      classNames.push("active");
-
-    const styles: React.CSSProperties = {};
-    if (!KeyRecorder.connectedEditor) {
-      styles.opacity = 0.3;
-    }
-
-    return (
-      <div className="recorder-plugin" title="Record code" {...{style: styles}}>
-        <svg className="recorder-plugin-icon" height="36" width="36" viewBox="0 0 187.5 187.5" onClick={this.toggleActive}>
-          <rect x="0" y="0" height="187.5" width="187.5" fill={this.state.active ? "red" : "#222"}/>
-          {keyboardIcon}
-        </svg>
-        <span className="recorder-plugin-name">Code</span>
-      </div>
-    );
-  }
-}
-
 function KeySaveComponent(props: {data: CaptureData}) {
   return (
     <>
-      <th key="head" scope="row">
-        <svg className="recorder-plugin-icon" height="36" width="36" viewBox="0 0 187.5 187.5">
-          <rect x="0" y="0" height="187.5" width="187.5" fill="#222"/>
-          {keyboardIcon}
-        </svg>
-      </th>
-      <td key="cell">
-        <textarea readOnly value={JSON.stringify(props.data)}></textarea>
-      </td>
+      <textarea readOnly value={JSON.stringify(props.data)}></textarea>
     </>
   );
 }
 
+const recorder = new KeyRecorder();
 export default {
-  name: "CodeRecorder",
-  recorder: KeyRecorder,
-  configureComponent: KeyConfigureComponent,
-  saveComponent: KeySaveComponent
-} as RecorderPlugin<typeof KeyRecorder>;
+  enabled: () => !!recorder.connectedEditor,
+  icon,
+  key: "rp-codemirror",
+  name: "Code",
+  recorder: recorder,
+  saveComponent: KeySaveComponent,
+  title: "Record code"
+} as RecorderPlugin<CaptureData>;
 
 function formatNum(x: number): number {
   return parseFloat(x.toFixed(2));
