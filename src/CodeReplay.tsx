@@ -2,7 +2,7 @@ import * as React from "react";
 import {Player, Utils} from "ractive-player";
 const {bind} = Utils.misc,
       {parseTime} = Utils.time;
-import type {Broadcast, ReplayData} from "ractive-player";
+import type {ReplayData} from "ractive-player";
 
 import CodeEditor from "./CodeEditor";
 
@@ -32,7 +32,6 @@ export type CaptureData = ReplayData<
 >;
 
 interface Props {
-  broadcast?: Broadcast;
   command: (dir: "fwd" | "back", data: string, state: CRState) => void;
   mode?: string;
   replay: CaptureData;
@@ -50,7 +49,7 @@ interface CRState {
 
 type ReplayCommand = CaptureData extends ReplayData<infer T> ? T extends [infer A, infer B] ? {type: A; data: B; state: CRState} : never : never;
 
-export default class CodeReplay extends React.Component<Props, {}> {
+export default class CodeReplay extends React.Component<Props, Record<string, never>> {
   static contextType = Player.Context;
 
   private i: number;

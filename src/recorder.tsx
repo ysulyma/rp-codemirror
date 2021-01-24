@@ -1,10 +1,8 @@
 import * as React from "react";
-import {useMemo, useState} from "react";
 import * as CodeMirror from "codemirror";
 
-import {Utils, ReplayData} from "ractive-player";
-const {bind} = Utils.misc,
-      {onClick} = Utils.mobile;
+import {Utils} from "ractive-player";
+const {bind} = Utils.misc;
 import {ReplayDataRecorder, RecorderPlugin} from "rp-recording";
 
 import CodeEditor from "./CodeEditor";
@@ -142,7 +140,7 @@ class KeyRecorder extends ReplayDataRecorder<CaptureData> {
     } else {
       this.capture(time, ["selection", {anchor, head}]);
     }
-  };
+  }
 
   captureKey(cm: CodeMirror.Editor, {from, to, text, removed}: CodeMirror.EditorChange) {
     const time = this.manager.getTime();
@@ -202,9 +200,9 @@ export default {
   title: "Record code"
 } as RecorderPlugin<CaptureData>;
 
-function formatNum(x: number): number {
-  return parseFloat(x.toFixed(2));
-}
+// function formatNum(x: number): number {
+//   return parseFloat(x.toFixed(2));
+// }
 
 function whitelist<T, K extends keyof T>(obj: T, keys: K[]) {
   const ret = {} as Pick<T, typeof keys[number]>;

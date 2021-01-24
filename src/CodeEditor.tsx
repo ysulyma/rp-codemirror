@@ -23,7 +23,7 @@ interface Props {
   (style.sheet as CSSStyleSheet).insertRule(".CodeMirror [contenteditable]{-webkit-user-select: text;user-select: text;}", 0);
 }
 
-export default class CodeEditor extends React.Component<Props, {}> {
+export default class CodeEditor extends React.Component<Props, Record<string, never>> {
   static contextType = Player.Context;
   editor: Editor;
   placeholder: HTMLDivElement;
