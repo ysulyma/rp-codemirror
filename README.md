@@ -2,6 +2,8 @@
 
 [CodeMirror](https://codemirror.net/) plugin for [ractive-player](https://github.com/ysulyma/ractive-player)/[rp-recording](https://github.com/ysulyma/rp-recording/).
 
+**Warning** This library is for CodeMirror 5, which isn't great on mobile. The upcoming [CodeMirror 6](https://codemirror.net/6/) will bring much improved mobile support, but this library does not yet support CodeMirror 6.
+
 ## Installation
 
     $ npm install rp-codemirror
