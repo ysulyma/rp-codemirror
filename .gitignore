@@ -7,4 +7,5 @@
 
 # generated files
 rp-codemirror.js
-rp-codemirror.recorder.js
+recorder.js
+extensions.js

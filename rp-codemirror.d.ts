@@ -1,71 +1,26 @@
-import * as CodeMirror from "codemirror";
 import * as React from "react";
-import {ReplayData} from "ractive-player";
+import {Player, ReplayData} from "ractive-player";
+
+import type {EventEmitter} from "events";
+import {StrictEventEmitter} from "strict-event-emitter-types";
+
+import {ChangeSet, Extension} from "@codemirror/state";
+import {EditorView} from "@codemirror/view";
 
 export = RPCodeMirror;
 export as namespace RPCodeMirror;
 
-// CodeEditor
-interface CodeEditorProps {
-  keyMap?: CodeMirror.KeyMap;
-  mode?: string;
-  readOnly?: boolean;
-  className?: string;
-  style?: React.CSSProperties;
-  theme?: string;
-}
-
-// CodeReplay
-interface Change {
-  from: CodeMirror.Position;
-  to: CodeMirror.Position;
-  text: string[];
-  removed: string[];
-}
-
-interface CMSelection {
-  anchor: CodeMirror.Position;
-  head: CodeMirror.Position;
-}
-
-interface CodeReplayProps {
-  command: (dir: "fwd" | "back", data: string, state: CRState) => void;
-  mode?: string;
-  replay: RPCodeMirror.CaptureData;
-  start: number | string;
-  className?: string;
-  style?: React.CSSProperties;
-  theme?: string;
-}
-
-interface CRState {
-  cursor: CodeMirror.Position;
-  selection: CMSelection;
-  value: string[];
-}
-
 declare namespace RPCodeMirror {
-  type CaptureData = ReplayData<
-  ["command", string] |
-  ["cursor", CodeMirror.Position] |
-  ["selection", CMSelection] |
-  ["text", Change]
-  >;
-
-  class CodeEditor extends React.Component<CodeEditorProps> {
-    editor: CodeMirror.Editor;
-    ready: Promise<void>;
-  }
-
-  class CodeReplay extends React.Component<CodeReplayProps> {
-    static contextType: typeof Player.Context;
-
-    codeEditor: CodeEditor;
-    cursor: HTMLDivElement;
-    cursorDiv: HTMLDivElement;
-    cursorState: CodeMirror.Position;
-    duration: number;
-    selectionsDiv: HTMLDivElement;
+  function cmReplay(args: {
+    ChangeSet: typeof ChangeSet;
+    data: ReplayData<unknown[]>;
+    handle?: (key: string) => void;
+    playback: StrictEventEmitter<EventEmitter, {
+      "timeupdate": number;
+    }>;
     start: number;
-  }
+    view: EditorView;
+  }): Extension;
+
+  const fakeSelection: Extension;
 }

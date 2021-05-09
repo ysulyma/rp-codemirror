@@ -11,5 +11,14 @@
     "suppressImplicitAnyIndexErrors": true,
     "target": "ES2017"
   },
-  "files": ["./src/index.ts", "./src/recorder.tsx", "./rp-codemirror.d.ts", "./recorder.d.ts"]
+  "files": [
+    "./src/index.ts",
+    "./rp-codemirror.d.ts",
+
+    "./src/extensions.ts",
+    "./extensions.d.ts",
+
+    "./src/recorder.tsx",
+    "./recorder.d.ts"
+  ]
 }
