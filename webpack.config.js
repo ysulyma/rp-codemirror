@@ -5,7 +5,6 @@ const baseConfig = {
   devtool: false,
 
   externals: {
-    "codemirror": "CodeMirror",
     "ractive-player": {
       commonjs: "ractive-player",
       commonjs2: "ractive-player",
@@ -23,7 +22,7 @@ const baseConfig = {
       commonjs2: "rp-recording",
       amd: "rp-recording",
       root: "RPRecording"
-    },
+    }
   },
 
   mode: "production",
@@ -49,11 +48,11 @@ const baseConfig = {
     emitOnErrors: true
   },
 
-  plugins: [
-    new webpack.BannerPlugin({
-      banner: () => require("fs").readFileSync("./LICENSE", {encoding: "utf8"})
-    })
-  ],
+  // plugins: [
+  //   new webpack.BannerPlugin({
+  //     banner: () => require("fs").readFileSync("./LICENSE", {encoding: "utf8"})
+  //   })
+  // ],
 
   resolve: {
     extensions: [".ts", ".tsx", ".js", ".jsx", ".json"]
@@ -76,11 +75,22 @@ module.exports = [
     ...baseConfig,
     entry: `${__dirname}/src/recorder.tsx`,
     output: {
-      filename: "rp-codemirror.recorder.js",
+      filename: "recorder.js",
       path: __dirname,
       library: ["RPCodeMirror", "CodeRecorderPlugin"],
       libraryExport: "default",
       libraryTarget: "umd"
+    }
+  },
+  {
+    ...baseConfig,
+    entry: `${__dirname}/src/extensions.ts`,
+    output: {
+      filename: "extensions.js",
+      path: __dirname,
+      library: "RPCodeMirrorExtensions",
+      libraryTarget: "umd",
+      globalObject: `(typeof self !== 'undefined' ? self : this)`
     }
   }
 ];

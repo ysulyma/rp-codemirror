@@ -1,29 +1,10 @@
 import * as React from "react";
-import * as CodeMirror from "codemirror";
 
 import {Utils} from "ractive-player";
 const {bind} = Utils.misc;
 import {ReplayDataRecorder, RecorderPlugin} from "rp-recording";
 
-import CodeEditor from "./CodeEditor";
-
-interface CMSelection {
-  anchor: CodeMirror.Position;
-  head: CodeMirror.Position;
-}
-
-interface Change {
-  from: CodeMirror.Position;
-  to: CodeMirror.Position;
-  text: string[];
-  removed: string[];
-}
-
-type CaptureData = 
-  ["command", string] |
-  ["cursor", CodeMirror.Position] |
-  ["selection", CMSelection] |
-  ["text", Change];
+import type {EditorView, keymap} from "@codemirror/view";
 
 const icon = (
   <g transform="scale(0.5333333333)">
@@ -93,81 +74,52 @@ const icon = (
 
 // the actual thingy that gets exported
 class KeyRecorder extends ReplayDataRecorder<CaptureData> {
-  private cm: CodeMirror.Editor;
-  connectedEditor: CodeEditor;
-
   constructor() {
     super();
-    bind(this, ["captureCursor", "captureKey", "captureKeySequence"]);
+    bind(this, ["extension"]);
   }
 
-  connect(codeEditor: CodeEditor) {
-    this.connectedEditor = codeEditor;
-  }
+  extension($cm: {
+    EditorView: typeof EditorView;
+    keymap: typeof keymap;
+  }, keys: string[] = []) {
+    // record document changes
+    const updateListener = $cm.EditorView.updateListener.of(update => {
+      if (!this.manager || this.manager.paused || !this.manager.active)
+        return;
 
-  disconnect() {
-    this.connectedEditor = null;
-  }
+      // get selection change (if any)
+      const transactions =
+        update.transactions
+        .map(t => {
+          if (!t.selection)
+            return false;
+          const range = t.selection.ranges[0];
+          return [range.anchor, range.head];
+        })
+        .filter(Boolean)
+        .slice(-1);
 
-  beginRecording() {
-    // DO NOT FORGET TO CALL SUPER
-    super.beginRecording();
-    const cm = this.connectedEditor.editor;
-    cm.on("change", this.captureKey);
-    cm.on("cursorActivity", this.captureCursor);
-    cm.on("keyHandled", this.captureKeySequence);
-  }
+      this.capture(this.manager.getTime(), [
+        update.changes,
+        ...transactions
+      ]);
+    });
 
-  endRecording() {
-    const cm = this.connectedEditor.editor;
-    cm.off("change", this.captureKey);
-    cm.off("cursorActivity", this.captureCursor);
-    cm.off("keyHandled", this.captureKeySequence);
-  }
+    // record special key presses
+    const keyListener = $cm.keymap.of(
+      keys.map(key => ({
+        key,
+        run: () => {
+          if (!this.manager || this.manager.paused || !this.manager.active)
+            return false;
+          this.capture(this.manager.getTime(), key);
+          return false;
+        }
+      }))
+    );
 
-  captureCursor(cm: CodeMirror.Editor) {
-    const time = this.manager.getTime();
-
-    if (this.manager.paused)
-      return;
-
-    const selection = cm.getDoc().listSelections()[0],
-          anchor = whitelist(selection.anchor, ["line", "ch"]),
-          head = whitelist(selection.head, ["line", "ch"]);
-
-    if (anchor.line === head.line && anchor.ch === head.ch) {
-      this.capture(time, ["cursor", whitelist(anchor, ["line", "ch"])]);
-    } else {
-      this.capture(time, ["selection", {anchor, head}]);
-    }
-  }
-
-  captureKey(cm: CodeMirror.Editor, {from, to, text, removed}: CodeMirror.EditorChange) {
-    const time = this.manager.getTime();
-
-    if (this.manager.paused)
-      return;
-
-    this.capture(time, [
-      "text",
-      {
-        from: whitelist(from, ["line", "ch"]),
-        to: whitelist(to, ["line", "ch"]),
-        text,
-        removed
-      }
-    ]);
-  }
-
-  captureKeySequence(cm: CodeMirror.Editor, sequence: string) {
-    const time = this.manager.getTime();
-    if (sequence.startsWith("Cmd-Alt-"))
-      return;
-
-    if (this.manager.paused)
-      return;
-
-    this.capture(time, ["command", sequence]);
+    return [updateListener, keyListener];
   }
 }
 
@@ -191,7 +143,7 @@ function KeySaveComponent(props: {data: CaptureData}) {
 
 const recorder = new KeyRecorder();
 export default {
-  enabled: () => !!recorder.connectedEditor,
+  enabled: () => true,
   icon,
   key: "rp-codemirror",
   name: "Code",
@@ -203,13 +155,3 @@ export default {
 // function formatNum(x: number): number {
 //   return parseFloat(x.toFixed(2));
 // }
-
-function whitelist<T, K extends keyof T>(obj: T, keys: K[]) {
-  const ret = {} as Pick<T, typeof keys[number]>;
-  for (const key of keys) {
-    if (key in obj)
-      ret[key] = obj[key];
-  }
-
-  return ret;
-}

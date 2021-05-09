@@ -1,12 +1,13 @@
 import {Player} from "ractive-player";
 import {Recorder, RecorderPlugin} from "rp-recording";
-import {CodeEditor} from "./rp-codemirror";
+
+import {Extension} from "@codemirror/state";
+import {EditorView} from "@codemirror/view";
 
 // recorder
 interface KeyRecorderStatic {
-  connect(editor: CodeEditor): void;
-  disconnect(): void;
   new(player: Player): Recorder;
+  extension(dep: EditorView): Extension;
 }
 
 declare const _default: RecorderPlugin;

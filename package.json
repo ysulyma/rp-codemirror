@@ -1,15 +1,18 @@
 {
   "name": "rp-codemirror",
-  "version": "1.0.0",
-  "description": "Codemirror recorder and replayer for ractive-player/rp-recording",
+  "version": "2.0.0",
+  "description": "Codemirror 6 recorder and replayer for ractive-player/rp-recording",
   "exports": {
     ".": "./rp-codemirror.js",
-    "./recorder": "./rp-codemirror.recorder.js"
+    "./extensions": "./extensions.js",
+    "./recorder": "./recorder.js"
   },
   "files": [
     "rp-codemirror.js",
-    "rp-codemirror.recorder.js",
+    "recorder.js",
+    "extensions.js",
     "rp-codemirror.d.ts",
+    "extensions.d.ts",
     "recorder.d.ts"
   ],
   "main": "rp-codemirror.js",
@@ -30,12 +33,13 @@
   },
   "homepage": "https://github.com/ysulyma/rp-codemirror#readme",
   "peerDependencies": {
-    "@types/codemirror": "^0.0.106",
-    "@types/react": "^17.0.0",
-    "rp-recording": "^2.0.0",
-    "ractive-player": "^2.0.3"
+    "@types/react": "^17.0.0"
   },
   "devDependencies": {
+    "@codemirror/commands": "^0.18.1",
+    "@codemirror/state": "^0.18.7",
+    "@codemirror/text": "^0.18.0",
+    "@codemirror/view": "^0.18.11",
     "@types/codemirror": "0.0.82",
     "@types/react": "^17.0.0",
     "@typescript-eslint/eslint-plugin": "^4.14.0",
@@ -44,9 +48,14 @@
     "eslint": "^7.18.0",
     "eslint-plugin-react": "^7.22.0",
     "eslint-plugin-react-hooks": "^4.2.0",
+    "strict-event-emitter-types": "^2.0.0",
     "ts-loader": "^8.0.14",
     "typescript": "^4.1.3",
     "webpack": "^5.17.0",
     "webpack-cli": "^4.4.0"
+  },
+  "dependencies": {
+    "ractive-player": "^2.0.4",
+    "rp-recording": "^2.0.1"
   }
 }
