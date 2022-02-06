@@ -1,5 +1,5 @@
 import * as React from "react";
-import {Player, ReplayData} from "ractive-player";
+import {Player, ReplayData} from "liqvid";
 
 import type {EventEmitter} from "events";
 import {StrictEventEmitter} from "strict-event-emitter-types";

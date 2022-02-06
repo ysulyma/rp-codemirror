@@ -1,7 +1,7 @@
 {
   "name": "rp-codemirror",
-  "version": "2.0.0",
-  "description": "Codemirror 6 recorder and replayer for ractive-player/rp-recording",
+  "version": "2.1.0",
+  "description": "Codemirror 6 recorder and replayer for Liqvid",
   "exports": {
     ".": "./rp-codemirror.js",
     "./extensions": "./extensions.js",
@@ -22,11 +22,11 @@
     "url": "git+https://github.com/ysulyma/rp-codemirror.git"
   },
   "keywords": [
-    "ractive-player",
+    "liqvid",
     "rp-recording",
     "codemirror"
   ],
-  "author": "Yuri Sulyma <yuri@ractive-player.org>",
+  "author": "Yuri Sulyma <yuri@liqvidjs.org>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/ysulyma/rp-codemirror/issues"
@@ -55,7 +55,7 @@
     "webpack-cli": "^4.4.0"
   },
   "dependencies": {
-    "ractive-player": "^2.0.4",
+    "liqvid": "^2.1.0-beta.2",
     "rp-recording": "^2.0.1"
   }
 }

@@ -1,6 +1,6 @@
 # rp-codemirror
 
-[CodeMirror 6](https://codemirror.net/6/) plugin for [ractive-player](https://github.com/ysulyma/ractive-player)/[rp-recording](https://github.com/ysulyma/rp-recording/).
+[CodeMirror 6](https://codemirror.net/6/) plugin for [Liqvid](https://liqvidjs.org).
 
 For CodeMirror 5, you should use the older (1.x) versions of this package.
 

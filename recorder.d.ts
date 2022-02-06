@@ -1,4 +1,4 @@
-import {Player} from "ractive-player";
+import {Player} from "liqvid";
 import {Recorder, RecorderPlugin} from "rp-recording";
 
 import {Extension} from "@codemirror/state";

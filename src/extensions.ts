@@ -1,4 +1,4 @@
-import {KeyMap, Player} from "ractive-player";
+import {KeyMap, Player} from "liqvid";
 
 import type {DOMEventHandlers, KeyBinding} from "@codemirror/view";
 
@@ -26,7 +26,7 @@ export function passThrough(player: Player, seqs: string[] = []): KeyBinding[] {
 }
 
 /**
-Prevent ractive events from firing inside text editor.
+Prevent Liqvid events from firing inside text editor.
 */
 export function suspendControls(player: Player): DOMEventHandlers<void> {
   return {

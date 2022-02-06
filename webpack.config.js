@@ -5,11 +5,11 @@ const baseConfig = {
   devtool: false,
 
   externals: {
-    "ractive-player": {
-      commonjs: "ractive-player",
-      commonjs2: "ractive-player",
-      amd: "ractive-player",
-      root: "RactivePlayer"
+    "liqvid": {
+      commonjs: "liqvid",
+      commonjs2: "liqvid",
+      amd: "liqvid",
+      root: "Liqvid"
     },
     "react": {
       commonjs: "react",
@@ -39,8 +39,12 @@ const baseConfig = {
   optimization: {
     minimizer: [
       new TerserPlugin({
+        extractComments: false,
         parallel: true,
         terserOptions: {
+          format: {
+            comments: false
+          },
           safari10: true
         }
       })

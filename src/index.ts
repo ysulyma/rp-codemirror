@@ -1,6 +1,6 @@
 import type {EventEmitter} from "events";
 
-import type {ReplayData} from "ractive-player";
+import type {ReplayData} from "liqvid";
 
 import type {ChangeSet as CS, Text} from "@codemirror/state";
 import type {EditorView} from "@codemirror/view";
